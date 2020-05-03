@@ -8,10 +8,10 @@ import os
 import datetime
 
 # DEFINITION DES FONCTIONS
-def nom():
+def nom(texte):
     # Fonction qui génère un nom de fichier en fonction de la date et heure de la sauvegarde
     date = datetime.datetime.now()
-    texte = "backup-wordpress-{}.tar.gz".format(date.strftime("%Y-%m-%d-%H-%M"))
+    texte = "backup-{nom}-{text}-{date}.tar.gz".format(nom = nom_base, text = texte, date = date.strftime("%Y-%m-%d-%H-%M"))
     return texte
 
 
@@ -32,17 +32,25 @@ def fichiers(dir_backup):
         backup_files.remove(backup_files[0])
     return(backup_files)    
 
-# Définition des constantes des répertoires
-dir_wordpress = "/var/www/html/wordpress/index.php"
+# Définition des constantes des répertoires et noms des bases
+dir_wordpress = "/var/www/html/wordpress/"
 dir_backup = "/home/administrateur/backup/"
-
+nom_base = "wordpress"
+nom_user_base = "wp_user"
 
 #  //  MAIN PROGRAM // PROGRAMME PRINCIPAL //
 # Récupération de la liste des copies de sauvegarde
 backup_files = fichiers(dir_backup)
-print(backup_files)
-# Définition du nom de la sauvegarde du jour
-nom_backup = nom()
-print(nom_backup)
 
-os.system("tar czvf {}{} {}".format(dir_backup, nom_backup, dir_wordpress))
+# Définition du nom de la sauvegarde du jour
+nom_backup_file = nom("files")
+nom_backup_base = nom("bases")
+
+
+# Sauvegarde de la base de donnée Wordpress
+os.system("mysqldump -h localhost -u {user} --databases {base} > {dir}{nom}".format(user = nom_user_base, base = nom_base, dir = dir_backup, nom = nom_backup_base))
+
+# Création du fichier de sauvegarde
+os.system("tar czvf {dest}{nom} {src}index.php".format(dest = dir_backup, nom = nom_backup_file, src = dir_wordpress))
+
+
