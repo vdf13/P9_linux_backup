@@ -15,7 +15,7 @@ def nom(texte):
     return texte
 
 
-def fichiers(dir_backup):
+def fichiers(texte):
     '''
     Fonction qui récupère la liste des fichiers du répertoire backup
     et ne renvoie que ceux dont le nom contient 'backup'.
@@ -24,7 +24,7 @@ def fichiers(dir_backup):
     fichiers = os.listdir(dir_backup)
     backup_files = []
     for file in fichiers:
-        if "backup" in file:
+        if "backup" in file and texte in file:
             backup_files.append(file)
     backup_files = sorted(backup_files)
     if len(backup_files) > 7:
@@ -40,7 +40,10 @@ nom_user_base = "wp_user"
 
 #  //  MAIN PROGRAM // PROGRAMME PRINCIPAL //
 # Récupération de la liste des copies de sauvegarde
-backup_files = fichiers(dir_backup)
+backup_files = fichiers("files")
+#print("FILES = ", backup_files)
+backup_bases = fichiers("bases")
+#print("BASES = ", backup_bases)
 
 # Définition du nom de la sauvegarde du jour
 nom_backup_file = nom("files")
@@ -48,7 +51,7 @@ nom_backup_base = nom("bases")
 
 
 # Sauvegarde de la base de donnée Wordpress
-os.system("mysqldump -h localhost -u {user} --databases {base} > {dir}{nom}".format(user = nom_user_base, base = nom_base, dir = dir_backup, nom = nom_backup_base))
+os.system("mysqldump -h localhost -u {user} --databases {base} | gzip > {dir}{nom}".format(user = nom_user_base, base = nom_base, dir = dir_backup, nom = nom_backup_base))
 
 # Création du fichier de sauvegarde
 os.system("tar czvf {dest}{nom} {src}index.php".format(dest = dir_backup, nom = nom_backup_file, src = dir_wordpress))
