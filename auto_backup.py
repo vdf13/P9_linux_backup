@@ -8,12 +8,14 @@ import os
 import datetime
 import re
 import glob
+import netrc
+import ftplib
+#from ftplib import FTP
 
 # DEFINITION DES FONCTIONS
 def nom(texte, base_name):
     # Fonction qui génère un nom de fichier en fonction de la date et heure de la sauvegarde
     date = datetime.datetime.now()
-    #texte = "backup-{nom}-{text}-{date}.tar.gz".format(nom = base_name, text = texte, date = date.strftime("%Y-%m-%d-%H-%M"))
     texte = f'backup-{base_name}-{texte}-{date.strftime("%Y-%m-%d-%H-%M")}.tar.gz'
     return texte
 
@@ -43,7 +45,8 @@ base_name = "wordpress"
 nom_user_base = "wp_user"
 backup_type = ["files", "bases"]
 virtual_host = "/etc/apache2/sites-available/wordpress.conf"
-
+ftp_host = "P9-DB-FTP"
+ftp_dir = '/home/testftp/depot'
 
 #  //  MAIN PROGRAM // PROGRAMME PRINCIPAL //
 # Récupération de la liste des fichiers  de sauvegarde
@@ -56,11 +59,24 @@ nom_backup_base = nom(backup_type[1], base_name)
 
 
 # Sauvegarde de la base de donnée Wordpress
-os.system("mysqldump -h localhost -u {user} --databases {base} | gzip > {dir}{nom}".format(user = nom_user_base, base = base_name, dir = dir_backup, nom = nom_backup_base))
+os.system(f"mysqldump -h localhost -u {nom_user_base} --databases {base_name} | gzip > {dir_backup}{nom_backup_base}")
 
-# Création du fichier de sauvegarde
-os.system("tar czvf {dest}{nom} {src}index.php".format(dest = dir_backup, nom = nom_backup_file, src = dir_wordpress))
+# Création du fichier de sauvegarde qui copie tous les fichiers du répertoire wordpress
+os.system(f"tar czf {dir_backup}{nom_backup_file} {dir_wordpress}*")
 
+# On récupère les informations de connexion du serveur ftp
+netrc = netrc.netrc()
+auth_ftp = netrc.authenticators(ftp_host)
 
+# Partie de connexion au serveur FTP 
+with ftplib.FTP(host= ftp_host, user=auth_ftp[0], passwd=auth_ftp[2]) as ftp:
+    try:
+        print(ftp.getwelcome())
+        ftp.cwd(ftp_dir)
+        ftp.storbinary('STOR ' + nom_backup_file, open(dir_backup + nom_backup_file , 'rb'))
+        ftp.storbinary('STOR ' + nom_backup_base, open(dir_backup + nom_backup_base , 'rb'))
+        ftp.quit()
+    except ftplib.all_errors as e:
+        print('FTP erreur : ', e)
 
 
