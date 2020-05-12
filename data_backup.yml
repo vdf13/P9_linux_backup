@@ -1,11 +1,13 @@
 ---
+# Nom des repertoires
 dir_wordpress: "/var/www/html/wordpress/"
 dir_backup: "/home/administrateur/backup/"
-dir_ftp: '/home/testftp/depot'
+dir_ftp: "/home/testftp/depot"
+dir_site_apache: "/etc/apache2/sites-available/"
 # Nom des fichiers
+virtual_host: "wordpress.conf"
 base_name: "wordpress"
 nom_user_base: "wp_user"
 backup_type: ["files", "bases"]
-virtual_host: "/etc/apache2/sites-available/wordpress.conf"
 ftp_host: "P9-DB-FTP"
 
