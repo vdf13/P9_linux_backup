@@ -17,7 +17,6 @@ import re
 import glob
 import netrc
 import ftplib
-#from ftplib import FTP
 import yaml
 
 # DEFINITION DES FONCTIONS
@@ -69,7 +68,6 @@ def supp_old_ftp_backup(texte, base_name):
         reg = re.search(rf'backup-{base_name}-{texte}(-[0-9]+)+.tar.gz',file)
         if reg is not None:
             backup_ftp_files.append(reg.group(0))
-    print(len(backup_ftp_files))
     # Si plus de 7 fichiers alors le plus ancien est supprimé
     if len(backup_ftp_files) > 7:
         with ftplib.FTP(ftp_host, auth_ftp[0], auth_ftp[2]) as ftp:
@@ -99,7 +97,11 @@ nom_backup_file = nom(backup_type[0], base_name)
 nom_backup_base = nom(backup_type[1], base_name)
 
 # Sauvegarde de la base de donnée Wordpress , utilisation du fichier protégé .my.cnf pour se connecter
-os.system(f"mysqldump -h localhost -u {nom_user_base} --databases {base_name} | gzip > {dir_backup}{nom_backup_base}")
+#os.system(f"mysqldump -h localhost -u {nom_user_base} --databases {base_name} | gzip > {dir_backup}{nom_backup_base}")
+os.system(f"mysqldump -h localhost -u {nom_user_base} --databases {base_name} > /tmp/backup.temp ")
+# Compresser le fichier avec tar gzip
+os.system(f"tar czf {dir_backup}{nom_backup_base} /tmp/backup.temp")
+
 # Création du fichier de sauvegarde qui copie tous les fichiers du répertoire wordpress
 # Ainsi que le fichier Virtualhost du serveur Apache
 os.system(f"tar czf {dir_backup}{nom_backup_file} {dir_wordpress}* {dir_site_apache}{virtual_host}")
@@ -131,7 +133,7 @@ ftp_bases = supp_old_ftp_backup(backup_type[1], base_name)
 
 
 
-# Tests des résultats des répertoires   en cas de DEBUGAGE
+# Tests des résultats des répertoires   en cas besoins de DEBUGAGE
 #print("WP FILES :\n", backup_files, len(backup_files))   # DEBUG
 #print("WP BASES :\n", backup_bases, len(backup_bases))   # DEBUG
 
