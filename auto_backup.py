@@ -7,17 +7,11 @@
 #   |-> Générer le nom de la sauvevarde  <- Source fichier data.yml
 #   |-> Sauvegarder les données sur le serveur local
 #      |-> Récupérer la liste des fichiers sauvegarde du serveur FTP
-#      |-> Supprimer la plus ancienne sauvegarde
+#      |-> Supprimer les plus anciennes sauvegardes
 #       |-> Transférer la sauvegarde sur le serveur FTP
 
 # IMPORTATION DES MODULES
-import os
-import datetime
-import re
-import glob
-import netrc
-import ftplib
-import yaml
+import os, sys, re, datetime, glob, netrc, ftplib, yaml, tarfile
 
 # DEFINITION DES FONCTIONS
 
@@ -37,14 +31,27 @@ def supp_old_backup(texte, base_name, dir_back):
     fichiers = glob.glob(dir_back + "*")
     fichiers.sort(key=os.path.getmtime)
     backup_files = []
+    now = datetime.datetime.now()
     for file in fichiers:
         reg = re.search(rf'backup-{base_name}-{texte}(-[0-9]+)+.tar.gz', file)
         if reg is not None:
             backup_files.append(reg.group(0))
+            # Suppression des fichiers sauvegardes + ancien que la valeur 'delai' du fichier yaml
+            file_date = datetime.datetime.fromtimestamp(os.path.getmtime(file))
+            delta = now - file_date
+            if delta.days < int(delai_retention):
+                print("Récent : ", file)    # DEBUG
+            else:
+                print("Ancien : ", file, " A supprimer")    # DEBUG
+                # os.remove(file)
+            
+            
+    '''
     if len(backup_files) > 7:
         print("Le fichier suivant sera supprimé du serveur Wordpress: ", backup_files[0])
         os.remove(dir_back + backup_files[0])
         backup_files.remove(backup_files[0])
+    '''
     return(backup_files)    
 
 def supp_old_ftp_backup(texte, base_name):
@@ -81,7 +88,11 @@ def supp_old_ftp_backup(texte, base_name):
     return(backup_ftp_files)
 
 # Chargement du fichier yaml et affectation en variables global
-with open('data_backup.yml') as f:
+if len(sys.argv) == 1:
+    print("Usage : script + yaml_file -> python3 auto_backup.py data_backup.yml")
+else:
+    data_file = sys.argv[1]
+with open(data_file) as f:
     try:
         data = yaml.safe_load(f)
     except yaml.YAMLError as e:
@@ -97,14 +108,20 @@ nom_backup_file = nom(backup_type[0], base_name)
 nom_backup_base = nom(backup_type[1], base_name)
 
 # Sauvegarde de la base de donnée Wordpress , utilisation du fichier protégé .my.cnf pour se connecter
-#os.system(f"mysqldump -h localhost -u {nom_user_base} --databases {base_name} | gzip > {dir_backup}{nom_backup_base}")
-os.system(f"mysqldump -h localhost -u {nom_user_base} --databases {base_name} > /tmp/backup.temp ")
-# Compresser le fichier avec tar gzip
-os.system(f"tar czf {dir_backup}{nom_backup_base} /tmp/backup.temp")
+os.system(f"mysqldump -h localhost -u {nom_user_base} --databases {base_name} > /tmp/backup.sql")
+
+# Utilisation du module tarfile pour créer l' archive de la base wordpress 
+tar = tarfile.open(dir_backup + nom_backup_base, 'w:gz')
+tar.add('/tmp/backup.sql')
+tar.close()
 
 # Création du fichier de sauvegarde qui copie tous les fichiers du répertoire wordpress
 # Ainsi que le fichier Virtualhost du serveur Apache
-os.system(f"tar czf {dir_backup}{nom_backup_file} {dir_wordpress}* {dir_site_apache}{virtual_host}")
+tar = tarfile.open(dir_backup + nom_backup_file, 'w:gz')
+tar.add(dir_wordpress)
+tar.add(dir_site_apache + virtual_host)
+tar.close()
+
 
 # Récupération de la liste des fichiers  de sauvegarde
 backup_files = supp_old_backup(backup_type[0], base_name, dir_backup)
