@@ -35,23 +35,16 @@ def supp_old_backup(texte, base_name, dir_back):
     for file in fichiers:
         reg = re.search(rf'backup-{base_name}-{texte}(-[0-9]+)+.tar.gz', file)
         if reg is not None:
-            backup_files.append(reg.group(0))
             # Suppression des fichiers sauvegardes + ancien que la valeur 'delai' du fichier yaml
             file_date = datetime.datetime.fromtimestamp(os.path.getmtime(file))
             delta = now - file_date
             if delta.days < int(delai_retention):
-                print("Récent : ", file)    # DEBUG
+                backup_files.append(reg.group(0))
+                #print("Récent : ", file)    # DEBUG
             else:
-                print("Ancien : ", file, " A supprimer")    # DEBUG
-                # os.remove(file)
+                print(f"La Sauvegarde de plus de {delai_retention} jours va être supprimé du serveur {wp_host}: ", file)    # DEBUG
+                os.remove(file)
             
-            
-    '''
-    if len(backup_files) > 7:
-        print("Le fichier suivant sera supprimé du serveur Wordpress: ", backup_files[0])
-        os.remove(dir_back + backup_files[0])
-        backup_files.remove(backup_files[0])
-    '''
     return(backup_files)    
 
 def supp_old_ftp_backup(texte, base_name):
@@ -61,31 +54,33 @@ def supp_old_ftp_backup(texte, base_name):
     Renvoie la liste des fichiers de sauvegarde après suppression
     '''
     # On récupère la liste des fichiers
+    now = datetime.datetime.now()
     with ftplib.FTP(ftp_host, auth_ftp[0], auth_ftp[2]) as ftp:
         try:
             ftp.cwd(dir_ftp)
-            list_files = []
-            ftp.dir(list_files.append)
+            fichiers = []
+            backup_ftp_files = []
+            ftp.retrlines('LIST -tr', fichiers.append)
+            for file in fichiers:
+                reg = re.search(rf'backup-{base_name}-{texte}(-[0-9]+)+.tar.gz', file)
+                if reg is not None:
+                    data = ftp.sendcmd('MDTM ' + reg.group())
+                    file_date = datetime.datetime.strptime(data[4:], "%Y%m%d%H%M%S")
+                    delta = now - file_date
+                    if delta.days < int(delai_retention):
+                        backup_ftp_files.append(reg.group())
+                        #print(f"Moins de {delai_retention} jours. : ", reg.group()) # DEBUG
+                        
+                    else:
+                        print(f"La Sauvegarde de plus de {delai_retention} jours va être supprimé du serveur {ftp_host}: ", reg.group())
+                        ftp.delete(reg.group())
+                        pass
+
         except ftplib.all_errors as e:
             print('FTP error :', e)
 
-    backup_ftp_files = []
-    for file in list_files:
-        # L'expression régulière pour ne récupérer que les fichiers de sauvegarde
-        reg = re.search(rf'backup-{base_name}-{texte}(-[0-9]+)+.tar.gz',file)
-        if reg is not None:
-            backup_ftp_files.append(reg.group(0))
-    # Si plus de 7 fichiers alors le plus ancien est supprimé
-    if len(backup_ftp_files) > 7:
-        with ftplib.FTP(ftp_host, auth_ftp[0], auth_ftp[2]) as ftp:
-            try:
-                ftp.cwd(dir_ftp)
-                print("Le fichier suivant sera supprimé du serveur FTP: ", backup_ftp_files[0])
-                ftp.delete(backup_ftp_files[0])
-                backup_ftp_files.remove(backup_ftp_files[0])
-            except ftplib.all_errors as e:
-                print('FTP error: ', e)
     return(backup_ftp_files)
+
 
 # Chargement du fichier yaml et affectation en variables global
 if len(sys.argv) == 1:
@@ -114,6 +109,7 @@ os.system(f"mysqldump -h localhost -u {nom_user_base} --databases {base_name} > 
 tar = tarfile.open(dir_backup + nom_backup_base, 'w:gz')
 tar.add('/tmp/backup.sql')
 tar.close()
+os.remove('/tmp/backup.sql')
 
 # Création du fichier de sauvegarde qui copie tous les fichiers du répertoire wordpress
 # Ainsi que le fichier Virtualhost du serveur Apache
