@@ -1,0 +1,23 @@
+---
+# Fichier yaml contenant les parametres pour le srcipt de sauvegarde auto_backup.py
+# 
+# Ces entrées sont les variables utilisées par le script
+#
+# Nom des repertoires
+dir_wordpress: "/var/www/html/wordpress/"
+dir_backup: "/home/administrateur/backup/"
+dir_ftp: "/home/testftp/depot"
+dir_site_apache: "/etc/apache2/sites-available/"
+#
+# Nom des fichiers, utilisateur, bases-wp, host
+virtual_host: "wordpress.conf"
+base_name: "wordpress"
+nom_user_base: "wp_user"
+ftp_host: "P9-DB-FTP"
+wp_host: "P9-DBG-Wordpress"
+#
+# Variable de nommage des sauvegardes ["files", "bases"]
+backup_type: ["files", "bases"]
+#
+# Delai de retention. En nombre de jours
+delai_retention: "4"

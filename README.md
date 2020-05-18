@@ -6,11 +6,11 @@
 
 ## Victor DE FARIA
 
-Valide l'utilsation de :
+Valide l'utilisation de :
 * cron
 * scrypt python
 * backup base mysql
 * backup répertoire
 * compression avec tar
 * transfert sur serveur ftp
-
+* Gestion des sauvegardes par date
